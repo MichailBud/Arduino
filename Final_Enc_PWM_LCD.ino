@@ -28,54 +28,41 @@ int duty_up = 2400;  // Верхняя граница ~180 градусов
 
 int duty = duty_down;
 int degree = 0;
+int enc_val = 0;
 
-
-void encoder(int value_add){
+void encoder(){
+  enc_val = 0;
   encA = digitalRead(encPinA);
   encB = digitalRead(encPinB);
   if ((encA) && (encB)){
     if (prevState==B00000001){
-      degree-=value_add;
-      check_print_value(degree);
+      enc_val = -1;
     }
     else if (prevState==B00000010){
-      degree+=value_add;
-      check_print_value(degree);
+      enc_val = 1;
     }
     prevState=B00000011;
   }
   else if ((!encA) && (encB)){
     if (prevState==B00000000){
-      degree-=value_add;
-      check_print_value(degree);
+      enc_val = -1;
     }
     else if (prevState==B00000011){
-      degree+=value_add;
-      check_print_value(degree);
+      enc_val = 1;
     }
     prevState=B00000001;
   }
   else if ((encA) && (!encB)){
     if (prevState==B00000011){
-      degree-=value_add;
-      check_print_value(degree);
+      enc_val = -1;
     }
     else if (prevState==B00000000){
-      degree+=value_add;
-      check_print_value(degree);
+      enc_val = 1;
     }
     prevState=B00000010;
-  }
-  if (degree < 0) {
-    degree = 180;
-    }
-  else if (degree > 180) {
-    degree = 0;
-    lcd.clear();
-    print_info();
-    }
-  
+  }  
 }
+
 void servo_go(){  // Функция создаёт ШИМ сигнал с частотой freq, и заполнением равным переменной duty
     lcd.setCursor(3,2);
     lcd.print("Servo moving!");
@@ -176,7 +163,19 @@ void loop() {
     lcd.clear();
   }
 
-  encoder(1);
+  encoder();
+  if (enc_val != 0){
+    check_print_value(degree);
+  }
+  degree += enc_val;
+  if (degree < 0) {
+    degree = 180;
+    }
+  else if (degree > 180) {
+    degree = 0;
+    lcd.clear();
+    print_info();
+    }
 
   printing_value(3, 1, degree);
 
