@@ -8,7 +8,7 @@
 #define encBut 2
 // Пин сервопривода
 #define servo_pin 13
-// Пин кнопки настройки
+// Пин кнопки настройки (Кнопка подключена к GND)
 #define but_settings 3
 
 
@@ -25,7 +25,7 @@ volatile bool set_flag = false;
 int freq = 50;    // Частота ШИМ (Гц)
 int duty_low = 500; // Нижняя граница ~0 градусов
 int duty_up = 2400;  // Верхняя граница ~180 градусов
-float duration = 1/(float)freq*1000000.0;
+float duration = 1/(float)freq*1000000.0; // Период в мс
 
 int duty = duty_low;
 int angle = 0;
@@ -72,7 +72,7 @@ void servo_go(){  // Функция создаёт ШИМ сигнал с час
       digitalWrite(servo_pin, HIGH);  
       delayMicroseconds(duty);
       digitalWrite(servo_pin, LOW);
-      delayMicroseconds(20000-duty);
+      delayMicroseconds(duration-duty);
     }
     lcd.clear();
     print_info();
@@ -108,6 +108,36 @@ void print_settings(){
   lcd.print("Settings");
 }
 
+void print_settings_freq(){
+  lcd.setCursor(4 ,2);
+  lcd.print("Freq:");
+  printing_value(9, 2, freq);
+  lcd.setCursor(13 ,2);
+  lcd.print("hz");
+}
+
+void print_settings_duty_low(){
+  lcd.setCursor(2 ,2);
+  lcd.print("Duty cycle lower:");
+  printing_value(10, 3, duty_low);
+  lcd.setCursor(1, 1);
+  lcd.print("Max value:");
+  printing_value(12, 1, duration);
+  lcd.setCursor(14 ,3);
+  lcd.print("mc");
+}
+
+void print_settings_duty_up(){
+  lcd.setCursor(2 ,2);
+  lcd.print("Duty cycle upper:");
+  printing_value(10, 3, duty_up);
+  lcd.setCursor(1, 1);
+  lcd.print("Max value:");
+  printing_value(12, 1, duration);
+  lcd.setCursor(14 ,3);
+  lcd.print("mc");
+}
+
 void printing_value(int col, int line, int value){ // Корректно печатает значения до 9999
   if ((value < 1000) && (value >= 100)){
     lcd.setCursor(col+1, line);
@@ -127,7 +157,7 @@ void printing_value(int col, int line, int value){ // Корректно печ�
   }
 }
 
-void check_print_angle(int value){  // Очищает в нужные моменты дисплей
+void check_print_angle(int value){  // Очищает в нужные моменты дисплей (Вывод значений градуса)
   int value2 = map(value, 0, 180, duty_low, duty_up);
   if ((value == 9) || (value == 99) || (value > 990 && value < 1000) || (value2 > 990 && value2 < 1000)){
     lcd.clear();
@@ -135,20 +165,31 @@ void check_print_angle(int value){  // Очищает в нужные момен
   }
 }
 
-void check_print_value(int value){  // Очищает в нужные моменты дисплей
+void check_print_value(int value, int value_of){  // Очищает в нужные моменты дисплей (Вывод значений частоты или диапазона)
   if ((value == 0) || (value == 5) || (value >= 90 && value < 100) || (value >= 990 && value < 1000)){
     lcd.clear();
+    switch (value_of) {
+      case 0:
+        print_settings_freq();
+        break;
+      case 1:
+        print_settings_duty_low();
+        break;
+      case 2:
+        print_settings_duty_up();
+        break;
+    }
     print_settings();
   }
 }
 
-int settings(int value, int change_value, int min_value, int max_value, int col, int line){
+int settings(int value, int change_value, int min_value, int max_value, int col, int line, int value_of){
   while (!(enc_flag) && (set_flag)){ 
       encoder();
       if (enc_val != 0){
         value += enc_val * change_value;
         if (enc_val == -1){
-          check_print_value(value);
+          check_print_value(value, value_of);
         }
         if (value < min_value) {
           value = max_value;
@@ -167,7 +208,7 @@ int settings(int value, int change_value, int min_value, int max_value, int col,
 }
 
 void setup() {
-  pinMode(encPinA, INPUT_PULLUP);// Подтяжка к плюсу
+  pinMode(encPinA, INPUT_PULLUP); // Подтяжка к плюсу
   pinMode(encPinB, INPUT_PULLUP);
   pinMode(encBut, INPUT_PULLUP);
   pinMode(but_settings, INPUT_PULLUP);
@@ -194,75 +235,28 @@ void loop() {
 
    
     // Настройка частоты
-    lcd.setCursor(4 ,2);
-    lcd.print("Freq:");
-    printing_value(9, 2, freq);
-    lcd.setCursor(13 ,2);
-    lcd.print("hz");
-    while (!((enc_flag) || (!set_flag))){ 
-      encoder();
-      if (enc_val != 0){
-        freq += enc_val * 5;
-        if (enc_val == -1){
-          check_print_value(freq);
-        }
-        if (freq < 0) {
-          freq = 1000;
-          }
-        else if (freq > 1000) {
-          freq = 0;
-          lcd.clear();
-          print_settings();
-          }
-        printing_value(9, 2, freq);
-      }
-    }
-    enc_flag = false;
+    print_settings_freq();
+    freq = settings(freq, 5, 0, 1000, 9, 2, 0);
     duration = 1/(float)freq*1000000.0;
-    delay(150);
-    enc_flag = false;
-    
-
+    lcd.clear();
 
     // Настройка нижней границы диапазона
-    lcd.setCursor(2 ,2);
-    lcd.print("Duty cycle lower:");
-    printing_value(10, 3, duty_low);
-    printing_value(1, 1, duration);
-    lcd.setCursor(14 ,3);
-    lcd.print("mc");
-    while (!((enc_flag) || (!set_flag))){ 
-      encoder();
-      if (enc_val != 0){
-        duty_low += enc_val * 10;
-        if (enc_val == -1){
-          check_print_value(duty_low);
-        }
-        if (duty_low < 0) {
-          duty_low = duration;
-          }
-        else if (duty_low > duration) {
-          duty_low = 0;
-          lcd.clear();
-          print_settings();
-          }
-        printing_value(10, 3, duty_low);
-      }
-      if ((enc_flag) || (!set_flag)){ 
-        
-        break;
-      }
-    }
-    delay(150);
-    enc_flag = false;
+    print_settings();
+    print_settings_duty_low();
+    duty_low = settings(duty_low, 10, 0, duration-1000, 10, 3, 1);
+    lcd.clear();
 
+    // Настройка верхней границы диапазона
+    print_settings();
+    print_settings_duty_up();
 
-
-
+    duty_up = settings(duty_up, 10, 0, duration, 10, 3, 2);
 
     set_flag = false;
     lcd.clear();
     print_info();
+    printing_value(3, 1, angle);
+    printing_value(12, 1, duty);
   }
 
   else if (enc_flag && !(set_flag)){  // Запуск поворота сервопривода
