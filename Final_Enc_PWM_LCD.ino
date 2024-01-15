@@ -74,7 +74,7 @@ void servo_go(){  // Функция создаёт ШИМ сигнал с час
       digitalWrite(servo_pin, HIGH);  
       delayMicroseconds(duty);
       digitalWrite(servo_pin, LOW);
-      delayMicroseconds(duration - 9duty);
+      delayMicroseconds(duration - duty);
     }
     lcd.clear();
     print_info();
