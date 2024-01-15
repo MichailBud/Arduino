@@ -14,11 +14,13 @@
 
 LiquidCrystal_I2C lcd(0x27,20,4); // Установка адреса дисплея 4x20 
 
+// Переменные для значений на выводах энкодера
 bool encA;
 bool encB;
 
-byte prevState;
-volatile bool enc_flag = false;
+byte prevState; // Предыдущие значения на выводах энкодера
+
+volatile bool enc_flag = false; 
 volatile bool set_flag = false;
 
 
@@ -27,8 +29,8 @@ int duty_low = 500; // Нижняя граница ~0 градусов
 int duty_up = 2400;  // Верхняя граница ~180 градусов
 float duration = 1/(float)freq*1000000.0; // Период в мс
 
-int duty = duty_low;
-int angle = 0;
+int duty = duty_low; 
+int angle = 0;  // Значение угла
 int enc_val = 0;
 
 void encoder(){
@@ -72,7 +74,7 @@ void servo_go(){  // Функция создаёт ШИМ сигнал с час
       digitalWrite(servo_pin, HIGH);  
       delayMicroseconds(duty);
       digitalWrite(servo_pin, LOW);
-      delayMicroseconds(duration-duty);
+      delayMicroseconds(duration - 9duty);
     }
     lcd.clear();
     print_info();
@@ -88,7 +90,7 @@ void settings_flag(){
   set_flag = !set_flag;
 }
 
-void print_info(){  // Выводит на дисплей неизменные данные
+void print_info(){  // Выводит на дисплей неизменные данные 
   lcd.setCursor(3,0);
   lcd.print("Angle:");
   lcd.setCursor(11,0);
@@ -243,7 +245,7 @@ void loop() {
     // Настройка нижней границы диапазона
     print_settings();
     print_settings_duty_low();
-    duty_low = settings(duty_low, 10, 0, duration-1000, 10, 3, 1);
+    duty_low = settings(duty_low, 10, 0, duration, 10, 3, 1);
     lcd.clear();
 
     // Настройка верхней границы диапазона
