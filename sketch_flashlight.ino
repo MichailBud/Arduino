@@ -2,9 +2,10 @@
 const int encPinA = 5;  // A
 const int encPinB = 6;  // B
 const int pin_led = 9;  // пин для подачи питания на светодиод
-const int pin_but = 3;  // пин для подачи питания на светодиод
+const int pin_but = 3;  // пин кнопки
 
 int mode = 0;
+int pre_mode = mode;
 
 bool encA; // действующее значение на выводе энкодера
 bool encB;
@@ -12,8 +13,17 @@ bool encB;
 bool preA=0; // предыдущее значение энкодера
 bool preB=0;
 
-int value = 1;
+int value = 10;
+int max_value = 200;
 int  enc_val = 0;
+
+int light = 100; //задержка, свет включен, микросекунд
+float dark = 1; //свет выключен, микросекунды
+float min_dark = 1; //миминмальная задержка темноты 1000 Герц
+float max_dark = 30; //максимальная задержка темноты 33 Герца
+byte potent_pin = 5;  //аналоговый пин потенциометра
+
+bool activate = 1;
 
 void setup() {
   Serial.begin(9600);
@@ -28,22 +38,40 @@ void setup() {
 }
 
 void loop() {
+  if (pre_mode != mode ){ // Борьба с дребезгом контактов
+    delay(200);
+    pre_mode++;
+    mode = pre_mode;
+    if (mode > 2) {
+      mode = 0;
+      pre_mode = 0;
+    }
+
+  }
   enc_val = 0;
   encoder();
   switch (mode){
       case 0: // Режим регулировки яркости
         value += enc_val;
         analogWrite(pin_led, value);
-        if (value > 200) {
+        if (value > max_value) {
         value = 0;
         }
         else if (value < 0){
-        value = 200;
+        value = max_value;
         }
         break;
-      case 1:
+      case 1: // Режим стробоскопа
+        dark += enc_val*0.1;
+        digitalWrite(pin_led, 1); // Включаем свет
+        delayMicroseconds(light); // ждем
+        digitalWrite(pin_led, 0); // выключаем
+        delay(dark);
+        Serial.println(dark);
         break;
-      case 2:
+      case 2: // Режим моргалки
+        encA = digitalRead(encPinA);
+        analogWrite(pin_led, value*encA);
         break;
     }
 }
@@ -51,9 +79,6 @@ void loop() {
 
 void mode_flag(){
   mode++;
-  if (mode > 2) {
-    mode = 0;
-  }
 }
 
 void pr(){
@@ -61,7 +86,7 @@ void pr(){
   //Serial.println(encB);
   //Serial.print(preA);
   //Serial.println(preB);
-  Serial.println(value);
+  //Serial.println(value);
 }
 
 void encoder(){
@@ -74,7 +99,6 @@ void encoder(){
     else if ((!preA)&&(!preB)){
       enc_val = -1;
     }
-    pr();
     }
 
   else if ((encA)&&(!encB)){
@@ -84,7 +108,6 @@ void encoder(){
     else if ((preA)&&(preB)){
       enc_val = -1;
     }
-    pr();
     }
 
   else if ((!encA)&&(!encB)){
@@ -94,7 +117,6 @@ void encoder(){
     else if ((preA)&&(!preB)){
       enc_val = -1;
     }
-    pr();
     }
   preA=encA;
   preB=encB;
